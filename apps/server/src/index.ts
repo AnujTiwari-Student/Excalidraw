@@ -3,6 +3,7 @@ import db from "database/client";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { middleware } from "./middleware.js";
+import { registerUserSchema } from "common/schema"
 
 const app = express();
 
@@ -13,9 +14,18 @@ app.get("/", (req, res) => {
 });
 
 app.post("/signup", async (req, res) => {
-    const { email, password } = req.body;
 
-    if(!email || !password) {
+    const validatedFields = registerUserSchema.safeParse(req.body);
+
+    if (!validatedFields.success) {
+            console.error("Validation failed:", validatedFields.error);
+            return res.status(400).json({ error: "Validation failed" });
+        }
+
+    const { username, password, name } = validatedFields.data
+    
+
+    if(!username || !password) {
         res.status(400).send("Email and password are required")
     }
 
@@ -24,8 +34,10 @@ app.post("/signup", async (req, res) => {
     try {
         await db.user.create({
             data: {
-                email,
-                password: hashPassword
+                username,
+                // @ts-expect-error undefined
+                password: hashPassword,
+                name
             }
         })
     } catch (error) {

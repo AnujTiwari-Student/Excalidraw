@@ -1,20 +1,18 @@
 {
-  "name": "database",
-  "module": "index.ts",
-  "type": "module",
+  "name": "common",
   "private": true,
   "devDependencies": {
     "@types/bun": "latest",
-    "prisma": "^6.16.1",
     "@repo/typescript-config": "*"
   },
   "peerDependencies": {
     "typescript": "^5"
   },
-  "dependencies": {
-    "@prisma/client": "6.16.1"
-  },
   "exports": {
-    "./client": "./index.ts"
+    "./config": "./src/config.ts",
+    "./schema": "./src/schema/index.ts"
+  },
+  "dependencies": {
+    "zod": "^4.1.8"
   }
 }

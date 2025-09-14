@@ -6,7 +6,8 @@
   "devDependencies": {
     "@types/bun": "latest",
     "@repo/typescript-config": "*",
-    "database": "*"
+    "database": "*",
+    "common": "*"
   },
   "peerDependencies": {
     "typescript": "^5"

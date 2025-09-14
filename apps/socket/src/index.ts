@@ -1,5 +1,6 @@
 import WebSocket, { WebSocketServer } from "ws";
 import jwt from "jsonwebtoken";
+import { JWT_SECRET } from "common/config";
 
 const wss = new WebSocketServer({ port: 8080 });
 
@@ -14,7 +15,7 @@ wss.on('connection', function connection(ws: WebSocket, request) {
   if(!token) return;
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET as string);
+    const decoded = jwt.verify(token, JWT_SECRET);
 
     if(!decoded) {
       ws.close();
