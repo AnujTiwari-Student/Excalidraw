@@ -5,7 +5,8 @@
   "private": true,
   "devDependencies": {
     "@types/bun": "latest",
-    "@repo/typescript-config": "*"
+    "@repo/typescript-config": "*",
+    "database": "*"
   },
   "peerDependencies": {
     "typescript": "^5"
@@ -17,7 +18,9 @@
     "start:prod": "bun dist/index.js"
   },
   "dependencies": {
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/ws": "^8.18.1",
+    "jsonwebtoken": "^9.0.2",
     "ws": "^8.18.3"
   }
 }

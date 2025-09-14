@@ -1,11 +1,46 @@
 import express from "express";
+import db from "database/client";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import { middleware } from "./middleware.js";
 
 const app = express();
 
 app.use(express.json())
 
-app.use("/", (req, res) => {
+app.get("/", (req, res) => {
     res.send("Hello World")
+});
+
+app.post("/signup", async (req, res) => {
+    const { email, password } = req.body;
+
+    if(!email || !password) {
+        res.status(400).send("Email and password are required")
+    }
+
+    const hashPassword = bcrypt.hash(password, 10);
+
+    try {
+        await db.user.create({
+            data: {
+                email,
+                password: hashPassword
+            }
+        })
+    } catch (error) {
+        console.log(error)
+        res.status(500).send("Something went wrong")
+    }
+
+})
+
+app.post("/login", (req, res) => {
+    res.send("Login")
+});
+
+app.post("/room", middleware, (req, res) => {
+    res.send("Room")
 });
 
 const PORT = 5000
