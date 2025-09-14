@@ -14,7 +14,7 @@ export function middleware(req: Request, res: Response, next: NextFunction) {
     }
 
     // @ts-expect-error undefined
-    req.userId = decoded;
+    req.userId = decoded.id
     next();
 
 }

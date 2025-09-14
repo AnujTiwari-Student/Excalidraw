@@ -3,7 +3,7 @@ import db from "database/client";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { middleware } from "./middleware.js";
-import { loginUserSchema, registerUserSchema } from "common/schema"
+import { createRoomSchema, loginUserSchema, registerUserSchema } from "common/schema"
 import { JWT_SECRET } from "common/config";
 
 const app = express();
@@ -105,8 +105,45 @@ app.post("/login", async (req, res) => {
 
 });
 
-app.post("/room", middleware, (req, res) => {
-    res.send("Room")
+app.post("/room", middleware, async (req, res) => {
+    const validatedFields = createRoomSchema.safeParse(req.body);
+    if(!validatedFields.success) {
+        console.error("Validation failed:", validatedFields.error);
+        return res.status(400).json({ error: "Validation failed" });
+    }
+
+    const { slug } = validatedFields.data
+
+    try {
+        const room = await db.room.findUnique({
+        where: {
+            slug
+        }
+    })
+
+    if(room) {
+        res.status(400).send("Room already exists")
+        return
+    }
+
+    // @ts-expect-error undefined
+    const userId = req.userId
+
+    const newRoom = await db.room.create({
+        data: {
+            slug,
+            adminId: userId
+        }
+    })
+
+    res.status(200).send({
+        message: "Room created successfully",
+        id: newRoom.id
+    })
+    } catch (error) {
+        res.status(500).send("Something went wrong")
+    }
+
 });
 
 const PORT = 5000
