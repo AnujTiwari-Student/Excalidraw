@@ -3,185 +3,200 @@ import db from "database/client";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { middleware } from "./middleware.js";
-import { createRoomSchema, loginUserSchema, registerUserSchema } from "common/schema"
+import {
+  createRoomSchema,
+  loginUserSchema,
+  registerUserSchema,
+} from "common/schema";
 import { JWT_SECRET } from "common/config";
 
 const app = express();
 
-app.use(express.json())
+console.log('JWT_SECRET loaded:', JWT_SECRET ? 'YES' : 'NO');
+console.log('JWT_SECRET value:', JWT_SECRET ? 'DEFINED' : 'UNDEFINED');
+
+console.log('JWT_SECRET (first 10 chars):', JWT_SECRET?.substring(0, 10));
+console.log('JWT_SECRET length:', JWT_SECRET?.length);
+console.log('JWT_SECRET type:', typeof JWT_SECRET);
+
+app.use(express.json());
 
 app.get("/", (req, res) => {
-    res.send("Hello World")
+  res.send("Hello World");
 });
 
 app.post("/signup", async (req, res) => {
+  const validatedFields = registerUserSchema.safeParse(req.body);
 
-    const validatedFields = registerUserSchema.safeParse(req.body);
+  if (!validatedFields.success) {
+    console.error("Validation failed:", validatedFields.error);
+    return res.status(400).json({ error: "Validation failed" });
+  }
 
-    if (!validatedFields.success) {
-            console.error("Validation failed:", validatedFields.error);
-            return res.status(400).json({ error: "Validation failed" });
-        }
+  const { username, password, name } = validatedFields.data;
 
-    const { username, password, name } = validatedFields.data
-    
+  if (!username || !password || !name) {
+    res.status(400).send("username and password is required");
+    return;
+  }
 
-    if(!username || !password || !name) {
-        res.status(400).send("username and password is required")
-        return
-    }
-
-    await db.user.findUnique({
-        where: {
-            username
-        }
-    }).then((user) => {
-        if(user) {
-            res.status(400).send("User already exists")
-        }
+  await db.user
+    .findUnique({
+      where: {
+        username,
+      },
     })
+    .then((user) => {
+      if (user) {
+        res.status(400).send("User already exists");
+      }
+    });
 
-    const hashPassword = await bcrypt.hash(password, 12);
+  const hashPassword = await bcrypt.hash(password, 12);
 
-    try {
-        const user = await db.user.create({
-            data: {
-                username,
-                password: hashPassword,
-                name
-            }
-        })
+  try {
+    const user = await db.user.create({
+      data: {
+        username,
+        password: hashPassword,
+        name,
+      },
+    });
 
-        res.status(200).send({
-            message: "User created successfully",
-            id: user.id
-        })
-
-    } catch (error) {
-        console.log(error)
-        res.status(500).send("Something went wrong")
-    }
-
-})
+    res.status(200).send({
+      message: "User created successfully",
+      id: user.id,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).send("Something went wrong");
+  }
+});
 
 app.post("/login", async (req, res) => {
-    
-    const validatedField = loginUserSchema.safeParse(req.body);
+  const validatedField = loginUserSchema.safeParse(req.body);
 
-    if (!validatedField.success) {
-            console.error("Validation failed:", validatedField.error);
-            return res.status(400).json({ error: "Validation failed" });
-    }
+  if (!validatedField.success) {
+    console.error("Validation failed:", validatedField.error);
+    return res.status(400).json({ error: "Validation failed" });
+  }
 
-    const { username, password } = validatedField.data
+  const { username, password } = validatedField.data;
 
-    if(!username || !password) {
-        res.status(400).send("Email and password are required")
-    }
+  if (!username || !password) {
+    res.status(400).send("Email and password are required");
+  }
 
-    const existingUser = await db.user.findUnique({
-        where: {
-            username
-        }
-    })
+  const existingUser = await db.user.findUnique({
+    where: {
+      username,
+    },
+  });
 
-    if(!existingUser) {
-        res.status(400).send("User does not exist")
-        return
-    }
+  if (!existingUser) {
+    res.status(400).send("User does not exist");
+    return;
+  }
 
-    const matchPassword = await bcrypt.compare(password, existingUser.password as string);
+  const matchPassword = await bcrypt.compare(
+    password,
+    existingUser.password as string
+  );
 
-    if(!matchPassword) {
-        res.status(400).send("Invalid password")
-        return
-    }
+  if (!matchPassword) {
+    res.status(400).send("Invalid password");
+    return;
+  }
 
-    const token = jwt.sign({ id: existingUser.id }, JWT_SECRET);
+  // @ts-ignore
+  const token = jwt.sign({ id: existingUser.id }, JWT_SECRET);
 
-    res.json({
-        token
-    })
-
+  res.json({
+    token,
+  });
 });
 
 app.post("/room", middleware, async (req, res) => {
-    const validatedFields = createRoomSchema.safeParse(req.body);
-    if(!validatedFields.success) {
-        console.error("Validation failed:", validatedFields.error);
-        return res.status(400).json({ error: "Validation failed" });
-    }
+  const validatedFields = createRoomSchema.safeParse(req.body);
+  if (!validatedFields.success) {
+    console.error("Validation failed:", validatedFields.error);
+    return res.status(400).json({ error: "Validation failed" });
+  }
 
-    const { slug } = validatedFields.data
+  const { slug } = validatedFields.data;
 
-    try {
-        const room = await db.room.findUnique({
-        where: {
-            slug
-        }
-    })
+  try {
+    const room = await db.room.findUnique({
+      where: {
+        slug,
+      },
+    });
 
-    if(room) {
-        res.status(400).send("Room already exists")
-        return
+    if (room) {
+      res.status(400).send("Room already exists");
+      return;
     }
 
     // @ts-expect-error undefined
-    const userId = req.userId
+    const userId = req.userId;
 
     const newRoom = await db.room.create({
-        data: {
-            slug,
-            adminId: userId
-        }
-    })
+      data: {
+        slug,
+        adminId: userId,
+      },
+    });
 
     res.status(200).send({
-        message: "Room created successfully",
-        id: newRoom.id
-    })
-    } catch (error) {
-        res.status(500).send("Something went wrong")
-    }
-
+      message: "Room created successfully",
+      id: newRoom.id,
+    });
+  } catch (error) {
+    res.status(500).send("Something went wrong");
+  }
 });
 
-app.get('/chat/:roomId', async (req, res)=> {
+app.get("/chat/:roomId", async (req, res) => {
+  try {
     const roomId = Number(req.params.roomId);
 
     const msg = await db.chat.findMany({
-        where: {
-            roomId: roomId
-        },
-        orderBy: {
-            id: "desc"
-        },
-        take: 50
-    })
+      where: {
+        roomId: roomId,
+      },
+      orderBy: {
+        id: "desc",
+      },
+      take: 50,
+    });
 
-    res.json({  
-        msg
-    })
+    res.json({
+      msg,
+    });
+  } catch (error) {
+    res.send({
+      message: error,
+    });
+  }
+});
 
-})
 
-app.get('/room/:slug', async (req, res)=> {
-    const slug = req.params.slug;
+app.get("/room/:slug", async (req, res) => {
+  const slug = req.params.slug;
 
-    const room = await db.room.findFirst({
-        where: {
-            slug
-        }
-    })
+  const room = await db.room.findFirst({
+    where: {
+      slug,
+    },
+  });
 
-    res.json({  
-        room
-    })
+  res.json({
+    room,
+  });
+});
 
-})
-
-const PORT = 5000
+const PORT = 5000;
 
 app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`)
+  console.log(`Server is running on http://localhost:${PORT}`);
 });
